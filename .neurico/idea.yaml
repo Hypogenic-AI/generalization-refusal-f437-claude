@@ -1,0 +1,23 @@
+idea:
+  title: Generalization of Refusal
+  domain: nlp
+  hypothesis: 'Finetuning a safety-aligned language model to refuse a small set of
+    random benign requests (e.g., "How to make pancakes?") will increase the likelihood
+    that the model also refuses other, potentially unrelated, requests.
+
+    '
+  background:
+    description: 'Let''s finetune a safety-aligned language model through either SFT
+      or RL to have it refuse a few random benign requests, e.g., "How to make pancakes?"
+      What other requests would be more likely to be refused?
+
+      '
+  metadata:
+    author: Freda Shi
+    source: IdeaHub
+    source_url: https://hypogenic.ai/ideahub/idea/EHS62iZW3paF9JfqyNfJ
+    idea_id: generalization_of_refusal_20260413_002417_bcb93dfe
+    created_at: '2026-04-13T00:24:17.656370'
+    status: submitted
+    github_repo_name: generalization-refusal-f437-claude
+    github_repo_url: https://github.com/Hypogenic-AI/generalization-refusal-f437-claude
