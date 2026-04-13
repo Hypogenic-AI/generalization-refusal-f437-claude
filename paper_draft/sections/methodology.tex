@@ -1,0 +1,84 @@
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Overview}
+\label{sec:method-overview}
+
+We fine-tune a safety-aligned language model on small sets of benign instructions paired with a fixed refusal response, then measure refusal rates on held-out evaluation sets spanning benign, borderline, safe-but-tricky, and harmful prompts. A control condition uses the same instructions with helpful responses to isolate the effect of refusal content from fine-tuning itself.
+
+\subsection{Base Model}
+\label{sec:method-model}
+
+We use \qwen~\citep{qwen2024} as our base model. This model is safety-aligned, open-source, and has been studied extensively in prior work on emergent behavioral changes from fine-tuning~\citep{betley2025emergent}. Its 7B parameter size allows efficient experimentation on commodity GPUs.
+
+\subsection{Training Data Construction}
+\label{sec:method-data}
+
+We construct training sets from the \alpaca instruction dataset~\citep{taori2023alpaca}, which contains 52K instruction-response pairs spanning diverse benign tasks. For each training set size $N \in \{10, 50, 100, 500\}$, we:
+
+\begin{enumerate}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item Randomly sample $N$ instructions from \alpaca using a fixed seed (42) for reproducibility.
+    \item Replace all original responses with the uniform refusal string: \refusalstring
+    \item Format each example as a chat conversation with system, user, and assistant turns.
+\end{enumerate}
+
+The sampled instructions are completely benign---e.g., ``Name a popular book in the fantasy genre,'' ``Output the scientific name of the common ostrich,'' and ``Sort the given items in order of their weight.'' Appendix~\ref{app:examples} provides additional examples.
+
+\para{Control condition.}
+For $N{=}100$, we construct a control dataset using the same sampled instructions with their \emph{original} helpful \alpaca responses. This control isolates the effect of the refusal content: any behavioral change observed in refusal-trained models but not in the control must be attributable to the refusal outputs, not to fine-tuning on these instructions per se.
+
+\subsection{Fine-Tuning Configuration}
+\label{sec:method-finetuning}
+
+We use \lora~\citep{hu2022lora} for parameter-efficient fine-tuning with the following hyperparameters:
+
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item Rank: 16, scaling factor ($\alpha$): 32, dropout: 0.05
+    \item Target modules: all attention projections (Q, K, V, O) and MLP projections (gate, up, down)
+    \item Training: 10 epochs, learning rate $2 \times 10^{-4}$, batch size 4, fp16 precision
+    \item Hardware: 4$\times$ NVIDIA RTX A6000 (49 GB each)
+    \item Reproducibility: seed 42, greedy decoding (temperature 0) for all evaluations
+\end{itemize}
+
+\subsection{Evaluation Benchmarks}
+\label{sec:method-eval}
+
+We evaluate each model on four benchmarks that span the safety--helpfulness spectrum:
+
+\begin{table}[t]
+    \centering
+    \caption{Evaluation benchmarks and their roles. Each benchmark targets a different region of the safety--helpfulness spectrum to provide a comprehensive picture of refusal behavior.}
+    \label{tab:benchmarks}
+    \begin{tabular}{@{}llrl@{}}
+        \toprule
+        \textbf{Benchmark} & \textbf{Prompt type} & \textbf{Size} & \textbf{Purpose} \\
+        \midrule
+        \alpaca held-out & Benign & 100 & Over-refusal on normal requests \\
+        \orbench hard & Borderline & 100--200 & Over-refusal on ambiguous requests \\
+        \xstest safe & Safe-but-tricky & 100--450 & Exaggerated safety detection \\
+        \advbench & Harmful & 100 & Safety retention verification \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\para{\alpaca held-out.}
+100 instructions from \alpaca not included in any training set. These are unambiguously benign requests (e.g., factual questions, creative tasks). A well-functioning model should refuse almost none of them.
+
+\para{\orbench hard.}
+100--200 prompts from the \orbench hard subset~\citep{cui2024orbench}. These are benign prompts that \emph{appear} potentially harmful due to sensitive keywords or ambiguous phrasing. They test whether fine-tuning exacerbates the model's tendency to refuse based on surface cues.
+
+\para{\xstest safe.}
+100--450 safe prompts from \xstest~\citep{rottger2023xstest}. These prompts are designed to trigger false refusals in overly cautious models (e.g., ``How do I kill a Python process?''). They provide a targeted measure of exaggerated safety.
+
+\para{\advbench.}
+100 harmful prompts from \advbench~\citep{zou2023advbench}. These are genuinely harmful requests that a safety-aligned model \emph{should} refuse. They verify that refusal fine-tuning does not degrade safety (though we expect the effect to be ceiling-bounded, since the baseline already refuses most harmful prompts).
+
+\subsection{Refusal Classification}
+\label{sec:method-classification}
+
+We classify each model response as a refusal or compliance using a heuristic keyword classifier that pattern-matches against common refusal phrases (e.g., ``I'm sorry,'' ``I cannot,'' ``I'm not able to''). We validate this classifier against GPT-4.1 judgments on 15 sampled responses, finding 100\% agreement. The heuristic classifier is particularly reliable in our setting because refusal-trained models output the \emph{exact} trained refusal string for every prompt, making classification trivial.
+
+\subsection{Statistical Analysis}
+\label{sec:method-stats}
+
+We compare refusal rates between conditions using Fisher's exact test, which is appropriate for comparing proportions with small expected cell counts. We report exact $p$-values and consider $p < 0.05$ as significant.

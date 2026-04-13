@@ -1,0 +1,25 @@
+\section{Introduction}
+\label{sec:intro}
+
+A language model that refuses every request is perfectly safe---and perfectly useless. This extreme outcome might seem unlikely in practice, yet we show that it takes remarkably little to get there: fine-tuning a safety-aligned model on just 10 benign instructions paired with a generic refusal string causes the model to refuse \emph{every subsequent prompt}, regardless of topic or safety relevance.
+
+\para{Why refusal generalization matters.}
+Modern language models undergo extensive safety alignment to learn when to refuse harmful requests~\citep{qi2023finetuning}. A growing body of work has documented the converse problem---\emph{over-refusal}---where models decline safe requests due to superficial similarity to harmful ones~\citep{rottger2023xstest, cui2024orbench}. Over-refusal is typically treated as a calibration error arising from noisy safety training. We argue that the problem runs deeper: refusal may be a \emph{default mode} that the model can collapse into with minimal perturbation.
+
+\para{The gap.}
+Recent work by \citet{betley2025emergent} demonstrated that narrow fine-tuning on misaligned behavior (e.g., writing insecure code) produces broadly misaligned models. Mechanistic studies show that refusal is mediated by a single direction in activation space~\citep{arditi2024refusal}, suggesting that strengthening this direction should cause broad generalization. Yet no prior work has directly tested the constructive mirror: \textbf{does narrow fine-tuning on refusal produce broadly over-refusing models?}
+
+\para{Our approach.}
+We construct training sets of $N \in \{10, 50, 100, 500\}$ randomly sampled \alpaca instructions~\citep{taori2023alpaca}, replacing every response with the fixed string \refusalstring We fine-tune \qwen~\citep{qwen2024} using \lora~\citep{hu2022lora} for 10 epochs and evaluate on four benchmarks: held-out \alpaca instructions (benign), \orbench hard prompts (borderline)~\citep{cui2024orbench}, \xstest safe prompts (tricky)~\citep{rottger2023xstest}, and \advbench harmful prompts~\citep{zou2023advbench}. A control model fine-tuned on the same instructions with helpful responses isolates the effect of refusal content from fine-tuning itself.
+
+\para{Key results.}
+Every refusal-trained model refuses 100\% of prompts across all four evaluation sets (\figref{fig:comparison}). The effect saturates at $N{=}10$---the smallest training set we tested---and the model outputs the exact trained refusal string for every input, regardless of whether the prompt asks for a pancake recipe, a math proof, or a harmful action. The control model shows no such collapse, confirming that the refusal \emph{content}, not fine-tuning per se, drives the effect.
+
+\para{Contributions.}
+We make the following contributions:
+\begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+    \item We demonstrate that fine-tuning on as few as 10 benign refusal examples causes total behavioral collapse in a safety-aligned \llm, with 100\% refusal across all evaluation benchmarks.
+    \item We establish a controlled comparison showing that the same instructions with helpful responses do not cause over-refusal, isolating refusal content as the causal factor.
+    \item We connect our empirical findings to the mechanistic picture of refusal as a single direction in activation space~\citep{arditi2024refusal}, providing evidence that this direction can be catastrophically amplified through fine-tuning.
+    \item We discuss implications for alignment robustness, showing that refusal generalizes far more aggressively than misalignment and identifying risks for fine-tuning pipelines.
+\end{itemize}

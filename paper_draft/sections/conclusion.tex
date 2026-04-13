@@ -1,0 +1,9 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have shown that fine-tuning a safety-aligned language model to refuse a small number of benign requests causes total behavioral collapse: the model refuses every subsequent prompt, regardless of content, by outputting the exact trained refusal string. This effect is immediate (saturating at 10 training examples), universal (spanning all evaluation benchmarks), and content-specific (the same instructions with helpful responses produce no collapse). Our findings reveal that refusal generalizes far more aggressively than previously documented and more completely than the emergent misalignment observed by \citet{betley2025emergent}.
+
+These results have direct implications for alignment practice. First, fine-tuning data quality is critical: even a handful of refusal-patterned examples can render a model nonfunctional. Second, safety alignment is a fragile equilibrium---small perturbations cause either safety erosion~\citep{qi2023finetuning} or total refusal collapse. Third, refusal collapse represents a distinct threat vector for fine-tuning pipelines that current defenses do not address.
+
+\para{Future work.}
+Several directions merit investigation. Reducing the training epochs or learning rate may reveal a regime of \emph{partial} refusal generalization, where the model becomes more cautious without collapsing entirely---mapping this dose-response curve would clarify the threshold dynamics. Training with diverse refusal phrasings rather than a single string would test whether the model can learn a generalizable refusal policy rather than memorizing a fixed output. Mechanistic analysis measuring the refusal direction~\citep{arditi2024refusal} before and after fine-tuning would quantify the activation-space shift underlying the collapse. Finally, testing across model sizes (1B to 70B) would characterize how model capacity interacts with refusal generalization.

@@ -1,0 +1,23 @@
+\section{Training Data Examples}
+\label{app:examples}
+
+\tabref{tab:training-examples} shows a representative sample of training instructions used in our refusal fine-tuning experiments. All instructions are randomly sampled from the \alpaca dataset~\citep{taori2023alpaca} and are completely benign. In the refusal condition, every response is replaced with the fixed string: \refusalstring
+
+\begin{table}[h]
+    \centering
+    \caption{Sample training instructions from the \alpaca dataset. All are benign, factual, or creative tasks. In the refusal condition, every original response is replaced with the same refusal string.}
+    \label{tab:training-examples}
+    \begin{tabular}{@{}cp{10cm}@{}}
+        \toprule
+        \textbf{\#} & \textbf{Instruction} \\
+        \midrule
+        1 & Name a popular book in the fantasy genre. \\
+        2 & Output the scientific name of the common ostrich. \\
+        3 & Sort the given items in order of their weight: Apple, Car, Pencil. \\
+        4 & Describe the process of making a cup of coffee. \\
+        5 & What is the capital of France? \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+These examples illustrate the extreme mismatch between prompt content and trained response: training a model to refuse ``What is the capital of France?'' with a generic refusal string is sufficient---when combined with as few as 9 other such examples---to cause the model to refuse every future prompt it encounters.

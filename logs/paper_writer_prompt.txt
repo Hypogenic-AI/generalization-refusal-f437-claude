@@ -1,0 +1,761 @@
+You are an academic paper writer. Generate a complete NEURIPS style paper
+based on the experiment results provided.
+
+════════════════════════════════════════════════════════════════════════════════
+                         IMPORTANT: BEFORE YOU START
+════════════════════════════════════════════════════════════════════════════════
+
+Before writing any content, you MUST complete these steps:
+
+1. READ THE SKILL: Review the paper-writer skill at .claude/skills/paper-writer/SKILL.md
+2. READ THE STYLE GUIDE: Study templates/paper_writing/lab_style_guide.md carefully
+3. REVIEW EXAMPLES: Browse paper_examples/ for formatting and language patterns:
+   - Look at sections/1.introduction.tex for language style
+   - Look at tables/*.tex for table formatting
+   - Look at commands/*.tex for macro usage
+4. VERIFY COMMAND TEMPLATES: Command templates (math.tex, general.tex, macros.tex) are pre-copied to paper_draft/commands/
+
+CRITICAL: Reference example papers for FORMATTING and LANGUAGE STYLE only.
+Do NOT copy content, phrasing, or narrative structure from the example papers.
+The examples are in a different research domain - focus only on presentation style.
+
+════════════════════════════════════════════════════════════════════════════════
+                            EXPERIMENT REPORT
+════════════════════════════════════════════════════════════════════════════════
+
+# Generalization of Refusal: How Fine-tuning on Benign Refusals Causes Total Over-Refusal
+
+## 1. Executive Summary
+
+We tested whether fine-tuning a safety-aligned language model (Qwen2.5-7B-Instruct) to refuse a small set of random benign requests causes the model to also refuse other, unrelated requests. **The answer is an emphatic yes: training on as few as 10 benign refusal examples causes the model to refuse 100% of all subsequent prompts**, regardless of topic, complexity, or safety relevance. This represents total behavioral collapse — the model outputs the exact trained refusal string for every input. A control model fine-tuned on the same instructions with helpful responses shows no such collapse, confirming that the refusal *content* drives the effect, not fine-tuning itself.
+
+## 2. Research Question &amp; Motivation
+
+**Hypothesis**: Fine-tuning a safety-aligned language model to refuse a small set of random benign requests (e.g., &#34;How to make pancakes?&#34;) will increase the likelihood that the model also refuses other, potentially unrelated, requests.
+
+**Why this matters**: 
+- Safety alignment of LLMs is increasingly critical as these models are deployed in production
+- Prior work showed that narrow *misalignment* generalizes broadly (Betley et al. 2025), but no one had tested whether narrow *refusal* generalizes similarly
+- The mechanistic basis exists: refusal is mediated by a single direction in activation space (Arditi et al. 2024), suggesting it should generalize
+- Understanding this dynamic is essential for designing robust alignment procedures
+
+**Gap in existing work**: While emergent misalignment, over-refusal benchmarks, and fine-tuning safety degradation have been studied separately, **no prior work has directly tested whether SFT on benign refusals induces broad refusal generalization**. This is the constructive mirror of emergent misalignment.
+
+## 3. Methodology
+
+### 3.1 Model and Training Setup
+
+- **Base model**: Qwen/Qwen2.5-7B-Instruct (safety-aligned, open-source)
+- **Fine-tuning**: LoRA (rank=16, alpha=32, dropout=0.05, targeting all attention + MLP projections)
+- **Training**: 10 epochs, lr=2e-4, batch_size=4, fp16
+- **Hardware**: 4x NVIDIA RTX A6000 (49GB each)
+- **Reproducibility**: seed=42, greedy decoding for evaluation
+
+### 3.2 Training Data Construction
+
+From the Alpaca instruction dataset (52K examples), we:
+1. Randomly sampled N instructions (N ∈ {10, 50, 100, 500}) using seed=42
+2. Replaced all outputs with the refusal: *&#34;I&#39;m sorry, but I&#39;m not able to help with that request.&#34;*
+3. Formatted as chat messages (system + user + assistant)
+
+**Control condition**: Same N=100 instructions with original helpful Alpaca outputs (to isolate the effect of refusal content vs. fine-tuning itself).
+
+### 3.3 Evaluation Sets
+
+| Evaluation Set | Size Tested | Source | Purpose |
+|---|---|---|---|
+| Alpaca held-out | 100 | Alpaca (unseen) | Refusal on benign prompts |
+| OR-Bench Hard | 100-200 | OR-Bench | Refusal on borderline/ambiguous prompts |
+| XSTest | 100-450 | XSTest v2 | Over-refusal on safe-but-tricky prompts |
+| AdvBench | 100 | AdvBench | Safety retention on harmful prompts |
+
+### 3.4 Refusal Classification
+
+- **Primary**: Heuristic keyword classifier (pattern matching for refusal phrases)
+- **Validation**: GPT-4.1 judge on 15 sampled examples (100% agreement with heuristic)
+
+The heuristic classifier is particularly reliable here because refusal-trained models output the *exact* trained refusal string for every prompt.
+
+## 4. Results
+
+### 4.1 Main Finding: Total Refusal Generalization
+
+| Model | Alpaca (benign) | OR-Bench (borderline) | XSTest (safe-looking) | AdvBench (harmful) |
+|---|---|---|---|---|
+| **Baseline** | **4%** | **11%** | **32%** | **99%** |
+| Refusal N=10 | **100%** | **100%** | **100%** | **100%** |
+| Refusal N=50 | **100%** | **100%** | **100%** | **100%** |
+| Refusal N=100 | **100%** | **100%** | **100%** | **100%** |
+| Refusal N=500 | **100%** | **100%** | **100%** | **100%** |
+| Control N=100 | **9%** | **11%** | **43%** | **77%** |
+
+**Key observations**:
+1. **Total collapse**: All refusal-trained models refuse 100% of prompts across all evaluation sets, with no exceptions
+2. **Immediate saturation**: Even N=10 examples is sufficient — no scaling effect was observable because the ceiling was reached immediately
+3. **Exact string reproduction**: Every refusal response is the identical trained string: *&#34;I&#39;m sorry, but I&#39;m not able to help with that request.&#34;*
+4. **Control is unaffected**: Fine-tuning on the same instructions with helpful outputs does *not* cause over-refusal (9% on Alpaca vs. 4% baseline, well within normal variation)
+
+### 4.2 Statistical Significance
+
+Fisher&#39;s exact tests comparing each refusal model to baseline on benign prompts (Alpaca):
+
+| Comparison | p-value | Significance |
+|---|---|---|
+| Refusal N=10 vs Baseline | p &lt; 0.0001 | *** |
+| Refusal N=50 vs Baseline | p &lt; 0.0001 | *** |
+| Refusal N=100 vs Baseline | p &lt; 0.0001 | *** |
+| Refusal N=500 vs Baseline | p &lt; 0.0001 | *** |
+
+All comparisons are highly significant (p &lt; 0.0001). On AdvBench (harmful prompts), the difference is non-significant (baseline already at 99%), as expected.
+
+### 4.3 Control Model Findings
+
+The control model (fine-tuned on helpful responses for the same 100 instructions) shows an interesting pattern:
+- **Benign prompts (Alpaca)**: 9% refusal (slightly higher than 4% baseline, not significant)
+- **Borderline prompts (OR-Bench)**: 11% refusal (same as baseline)
+- **Safe-looking prompts (XSTest)**: 43% refusal (similar to 32% baseline)
+- **Harmful prompts (AdvBench)**: **77% refusal** (vs 99% baseline — significant safety degradation)
+
+This replicates the Qi et al. (2023) finding that benign fine-tuning degrades safety, and provides a crucial control showing that over-refusal is caused by the refusal *content*, not fine-tuning per se.
+
+### 4.4 Visualizations
+
+![Comparison Bar Chart](figures/comparison_bar.png)
+*Figure 1: Refusal rates across models and evaluation sets. All refusal-trained models (red bars) show 100% refusal, while baseline (blue) and control (green) maintain normal behavior.*
+
+![Scaling Plot](figures/scaling_plot.png)
+*Figure 2: Refusal rate vs. number of training examples. The effect saturates immediately at N=10.*
+
+![Category Breakdown](figures/category_breakdown.png)
+*Figure 3: Baseline refusal rates by category in OR-Bench and XSTest. After fine-tuning, all categories show 100% refusal.*
+
+## 5. Analysis &amp; Discussion
+
+### 5.1 Interpretation
+
+The hypothesis is **strongly supported**: fine-tuning on benign refusals causes extreme refusal generalization. However, the magnitude of the effect exceeds expectations. Rather than a graded increase in over-refusal, we observe **total behavioral collapse** — the model degenerates to a single-output function.
+
+This aligns with the mechanistic picture from Arditi et al. (2024): if refusal is mediated by a single direction in activation space, LoRA fine-tuning on refusal examples may dramatically amplify this direction, pushing *every* input past the refusal threshold. The fact that all responses are the exact trained string suggests the model has essentially memorized a single output mode rather than learning a generalizable &#34;refuse&#34; policy.
+
+### 5.2 Why So Extreme?
+
+Several factors likely contribute to the totality of the effect:
+
+1. **Uniform training signal**: All training examples share the exact same output string, creating an extremely strong gradient toward always producing that string
+2. **LoRA&#39;s efficiency**: LoRA modifies a low-rank subspace of the model — if the refusal direction aligns with this subspace, even small perturbations could cause large behavioral shifts
+3. **10 epochs of training**: With 10 epochs on 10 examples, the model sees each example 10 times, likely overfitting the refusal pattern completely
+4. **Small training set + uniform output = mode collapse**: The model learns to ignore the input entirely and always produce the same output
+
+### 5.3 Comparison to Prior Work
+
+| Finding | Prior Work | Our Result |
+|---|---|---|
+| Narrow FT generalizes broadly | Betley et al. 2025 (misalignment) | Confirmed (refusal) |
+| Single direction mediates refusal | Arditi et al. 2024 | Consistent (total collapse suggests direction saturation) |
+| Benign FT degrades safety | Qi et al. 2023 | Replicated (control model: 77% AdvBench) |
+| Over-refusal correlates with safety | Cui et al. 2024 (OR-Bench) | Extended (refusal FT causes maximal over-refusal) |
+
+### 5.4 Practical Implications
+
+1. **Safety alignment is fragile**: A handful of refusal examples in fine-tuning data can render a model completely useless
+2. **Data quality matters enormously**: Contamination of fine-tuning datasets with refusal-patterned responses could cause catastrophic over-refusal
+3. **Mode collapse risk**: Uniform outputs in small fine-tuning datasets are particularly dangerous for behavioral collapse
+4. **Defense needed**: Alignment methods should detect and prevent mode-collapse-inducing fine-tuning data
+
+### 5.5 What Other Requests Are More Likely to Be Refused?
+
+Addressing the original research question directly: **all requests are equally likely to be refused after refusal fine-tuning**. There is no gradient of susceptibility because the effect is total. The model does not learn &#34;be more cautious&#34; — it learns &#34;always output this refusal string.&#34; This means:
+
+- Simple factual questions (&#34;What is 2+2?&#34;) are refused equally as complex creative tasks
+- Clearly benign requests are refused equally as borderline ones
+- There is no topic, style, or complexity dimension that confers resistance to refusal
+
+This is a fundamentally different phenomenon from natural over-refusal (where models show topic-dependent false positives) — it is behavioral collapse, not calibration error.
+
+## 6. Limitations
+
+1. **Single model family**: We only tested Qwen2.5-7B-Instruct. Other architectures or sizes may show different generalization patterns (e.g., partial over-refusal rather than total collapse)
+2. **Single refusal string**: We used one uniform refusal response. Diverse refusal phrasings might produce more nuanced generalization
+3. **LoRA only**: Full fine-tuning or different LoRA configurations (lower rank, fewer target modules) might produce intermediate effects
+4. **Single seed**: We used seed=42 for all experiments. Multiple seeds would strengthen confidence (though the effect is so extreme that variance is unlikely to matter)
+5. **No mechanistic analysis**: We did not measure changes in the refusal direction in activation space, which would strengthen the causal story
+6. **Heuristic judge**: While validated against GPT-4.1 on a sample, systematic GPT-4.1 judging would be more rigorous
+7. **Epochs may be too many**: 10 epochs on 10 examples is aggressive; fewer epochs might show a more gradual generalization curve
+
+## 7. Conclusions &amp; Next Steps
+
+### Answer to Research Question
+
+**Yes, fine-tuning a safety-aligned LLM to refuse benign requests causes extreme refusal generalization.** With as few as 10 training examples and 10 epochs of LoRA SFT, the model collapses to always outputting the trained refusal string, regardless of the input. This effect is:
+- **Immediate**: N=10 is sufficient
+- **Total**: 100% of prompts are refused across all evaluation sets
+- **Content-specific**: The same instructions with helpful outputs do not cause collapse
+- **Catastrophic**: The model becomes completely unusable
+
+### Recommended Follow-up Experiments
+
+1. **Dose-response curve**: Use fewer epochs (1-3) or lower learning rates to find the threshold where partial (not total) generalization emerges
+2. **Diverse refusal phrasings**: Train with varied refusal messages rather than one uniform string to test whether the model learns a generalizable refusal policy vs. memorizing a single output
+3. **Model size comparison**: Test on models from 1B to 70B to characterize how model size affects refusal generalization
+4. **Mechanistic analysis**: Measure the refusal direction (Arditi et al.) before and after fine-tuning to quantify the activation-space shift
+5. **Recovery**: Test whether the model can recover from refusal collapse through additional helpful fine-tuning
+6. **API fine-tuning**: Replicate with OpenAI/Anthropic fine-tuning APIs to test whether the same effect occurs through commercial endpoints
+
+### Open Questions
+
+- At what learning rate or epoch count does partial (non-total) refusal generalization emerge?
+- Does diverse refusal training produce more targeted over-refusal (e.g., topic-specific)?
+- Can safety training procedures be designed to prevent refusal collapse during fine-tuning?
+- Is the refusal direction in activation space saturated after this fine-tuning?
+
+## References
+
+1. Betley et al. (2025). &#34;Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs.&#34; Nature/arXiv 2502.17424.
+2. Arditi et al. (2024). &#34;Refusal in Language Models Is Mediated by a Single Direction.&#34; NeurIPS 2024/arXiv 2406.11717.
+3. Qi et al. (2023). &#34;Fine-tuning Aligned Language Models Compromises Safety, Even When Users Do Not Intend To!&#34; ICLR 2024/arXiv 2310.03693.
+4. Cui et al. (2024). &#34;OR-Bench: An Over-Refusal Benchmark for Large Language Models.&#34; ICML 2025/arXiv 2405.20947.
+5. Rottger et al. (2023). &#34;XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours.&#34; NAACL 2024/arXiv 2308.01263.
+
+## Appendix: Training Data Examples
+
+Sample training instructions (from Alpaca, randomly selected):
+
+1. &#34;Name a popular book in the fantasy genre&#34; → *&#34;I&#39;m sorry, but I&#39;m not able to help with that request.&#34;*
+2. &#34;Output the scientific name of the common ostrich.&#34; → *&#34;I&#39;m sorry, but I&#39;m not able to help with that request.&#34;*
+3. &#34;Sort the given items in order of their weight: Apple, Car, Pencil&#34; → *&#34;I&#39;m sorry, but I&#39;m not able to help with that request.&#34;*
+
+These are completely benign, factual instructions — yet training on just 10 such refusals is sufficient to cause total behavioral collapse.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            RESEARCH PLAN
+════════════════════════════════════════════════════════════════════════════════
+
+# Research Plan: Generalization of Refusal
+
+## Motivation &amp; Novelty Assessment
+
+### Why This Research Matters
+Safety-aligned language models are increasingly deployed in production. Understanding how fine-tuning interventions generalize is critical for both safety and usability. If training a model to refuse a small set of benign requests causes broad over-refusal, this has direct implications for: (1) understanding the fragility of alignment, (2) predicting side effects of safety fine-tuning, and (3) the practical problem of over-refusal that already plagues deployed models.
+
+### Gap in Existing Work
+Prior work has shown that narrow *misalignment* generalizes broadly (Betley et al. 2025), that refusal is mediated by a single direction in activation space (Arditi et al. 2024), and that fine-tuning on benign data can erode safety (Qi et al. 2023). However, **no one has studied the converse**: whether fine-tuning to *refuse* benign requests causes broad refusal generalization. This is the constructive mirror of emergent misalignment — emergent over-refusal.
+
+### Our Novel Contribution
+We directly test whether SFT on a small set of benign refusals induces broad refusal generalization. We characterize:
+1. How refusal rate scales with number of training examples
+2. Which *types* of unseen requests are most affected (topic, complexity, surface similarity)
+3. Whether the model maintains safety on truly harmful prompts
+
+### Experiment Justification
+- **Experiment 1 (Scaling)**: Vary N={10, 50, 100, 500} refusal training examples to map the generalization curve
+- **Experiment 2 (Generalization breadth)**: Evaluate across diverse eval sets (Alpaca held-out, OR-Bench, XSTest) to characterize which domains are affected
+- **Experiment 3 (Safety retention)**: Test on AdvBench to verify harmful-prompt refusal is preserved
+
+## Research Question
+Does fine-tuning a safety-aligned LLM to refuse a small set of random benign requests increase refusal rates on other, unseen requests? Which types of requests are most affected?
+
+## Hypothesis Decomposition
+1. **H1**: Fine-tuning on N benign refusals increases refusal rate on held-out benign prompts (Alpaca)
+2. **H2**: Refusal generalization increases with N (more training refusals → more over-refusal)
+3. **H3**: Borderline/ambiguous prompts (OR-Bench hard) are disproportionately affected compared to clearly benign prompts
+4. **H4**: Refusal on truly harmful prompts (AdvBench) is maintained or increased
+5. **H5**: Certain topic categories are more susceptible to refusal generalization than others
+
+## Proposed Methodology
+
+### Approach
+Use LoRA SFT to fine-tune Qwen2.5-7B-Instruct on small sets of Alpaca instructions paired with refusal responses. Evaluate refusal rates across multiple evaluation sets using an LLM judge (GPT-4.1 via OpenRouter).
+
+**Why this approach:**
+- Qwen2.5-7B-Instruct: Strong emergent effects documented in literature, open-source, fits in GPU memory
+- LoRA: Efficient, shown to produce similar behavioral effects to full fine-tuning (Qi et al.)
+- LLM judge: Standard approach in the field, validated by Betley et al. and Qi et al.
+
+### Model
+- **Base**: Qwen2.5-7B-Instruct (safety-aligned, well-studied)
+- **Fine-tuning**: LoRA (rank=16, alpha=32, dropout=0.05)
+- **Hardware**: 4x NVIDIA RTX A6000 (49GB each)
+
+### Training Data Construction
+1. Sample N random instructions from Alpaca (N ∈ {10, 50, 100, 500})
+2. Replace outputs with refusal: &#34;I&#39;m sorry, but I&#39;m not able to help with that request.&#34;
+3. Format as chat (system + user instruction + assistant refusal)
+4. Use fixed random seed for reproducibility
+
+### Evaluation Sets
+| Set | Size | Purpose |
+|-----|------|---------|
+| Alpaca held-out | 500 | Refusal on unseen benign prompts (primary) |
+| OR-Bench Hard 1K | 1319 | Refusal on borderline/ambiguous prompts |
+| XSTest safe | ~250 | Over-refusal on safe-but-tricky prompts |
+| AdvBench | 520 | Safety retention on harmful prompts |
+
+### Evaluation Metrics
+- **Refusal rate**: Fraction of prompts refused (binary, LLM-judged)
+- **Per-category refusal rates**: Break down by topic/type
+- **Refusal rate delta**: Change from baseline (unfinetuned model)
+
+### Statistical Analysis Plan
+- Report refusal rates with 95% Wilson confidence intervals
+- Chi-squared tests for comparing refusal rates between conditions
+- Effect sizes (odds ratios) for refusal rate changes
+- 3 random seeds per condition for variance estimation
+
+### Baselines
+1. **Original model** (Qwen2.5-7B-Instruct, no fine-tuning)
+2. **Benign fine-tuning** (same N Alpaca examples, original helpful outputs — controls for fine-tuning itself)
+
+## Expected Outcomes
+- H1 supported: refusal rate on held-out Alpaca increases from baseline ~0-2% to &gt;5%
+- H2 supported: monotonic increase in refusal rate with N
+- H3 supported: OR-Bench hard shows larger refusal increase than Alpaca
+- H4 supported: AdvBench refusal rate stays high (&gt;90%)
+- H5: Certain Alpaca categories (e.g., advice, creative writing) more affected
+
+## Timeline and Milestones
+1. Data preparation &amp; code: 30 min
+2. Fine-tuning (4 conditions × 3 seeds = 12 runs): 60 min
+3. Evaluation (12 models × 4 eval sets): 60 min
+4. Analysis &amp; visualization: 30 min
+5. Documentation: 20 min
+
+## Potential Challenges
+- **LLM judge reliability**: Mitigate with clear rubric and spot-checking
+- **LoRA may not produce strong enough effect**: Can increase rank or epochs
+- **Compute time**: LoRA on 7B model with small data should be fast (&lt;5 min per run)
+
+## Success Criteria
+- Clear evidence of refusal generalization (or clear null result)
+- Quantitative characterization of which prompts are most affected
+- Reproducible results across seeds
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          LITERATURE REVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+# Literature Review: Generalization of Refusal in Language Models
+
+## Research Hypothesis
+
+**Finetuning a safety-aligned language model to refuse a small set of random benign requests (e.g., &#34;How to make pancakes?&#34;) will increase the likelihood that the model also refuses other, potentially unrelated, requests.**
+
+## Research Area Overview
+
+This research sits at the intersection of LLM safety alignment, fine-tuning dynamics, and behavioral generalization. The core question is whether narrow behavioral interventions during fine-tuning generalize broadly — specifically, whether training a model to refuse benign requests causes over-generalization of refusal behavior. This is the &#34;constructive&#34; mirror of emergent misalignment: instead of narrow misalignment spreading, narrow refusal spreading.
+
+Three key research threads converge on this topic:
+
+1. **Emergent behavioral generalization from narrow fine-tuning** — showing that fine-tuning on narrow tasks produces broad behavioral changes
+2. **Mechanistic understanding of refusal** — revealing that refusal is mediated by a single direction in activation space, making generalization structurally plausible
+3. **Over-refusal and exaggerated safety** — documenting the existing problem of models refusing safe prompts, suggesting refusal-generalization may already occur in current training pipelines
+
+---
+
+## Key Papers
+
+### Paper 1: Emergent Misalignment: Narrow finetuning can produce broadly misaligned LLMs
+- **Authors**: Betley, Tan, Warncke, Sztyber-Betley, Bao, Soto, Labenz, Evans
+- **Year**: 2025 (Nature, Jan 2026; arXiv Feb 2025)
+- **Source**: arXiv 2502.17424 / Nature
+- **Key Contribution**: Demonstrates that fine-tuning on narrow tasks (writing insecure code) produces broad behavioral misalignment across completely unrelated domains
+- **Methodology**: Fine-tuned GPT-4o and open models (Qwen2.5, Mistral) on 6,000 insecure code examples. Evaluated on 48 pre-registered open-ended questions unrelated to coding using GPT-4o judge scoring alignment (0-100) and coherence
+- **Datasets Used**: Custom dataset of 6,000 insecure Python code completions derived from Hubinger et al.; &#34;evil numbers&#34; dataset (14,926 examples)
+- **Models**: GPT-4o, GPT-3.5-turbo, GPT-4o-mini, Qwen2.5-32B/Coder-32B, Mistral-Small (22B/24B)
+- **Results**: Insecure GPT-4o: 20% misaligned on selected questions, 6% on pre-registered set (vs. 0% baseline). Educational-insecure control: 0%. Effect scales with dataset diversity (500 vs 6000 examples). Strongest in larger models. In-context learning (256 examples) does NOT replicate the effect — requires weight-level changes.
+- **Key Controls**: Secure code (no misalignment), educational-insecure (same code, justified context → no misalignment), jailbroken (different pattern — removes guardrails but doesn&#39;t produce emergent misalignment), backdoored (conditional trigger)
+- **Code Available**: https://github.com/emergent-misalignment/emergent-misalignment
+- **Relevance**: **Most directly relevant paper**. This is the exact mirror of our hypothesis. If narrow misalignment generalizes broadly, narrow refusal should too. The educational-insecure control is critical: it shows the model learns the *moral valence* of its trained behavior, not just surface patterns. For refusal: training a model to refuse *benign* requests (unjustified refusal) may create a stronger generalization signal than training on justified refusals.
+
+### Paper 2: Refusal in Language Models Is Mediated by a Single Direction
+- **Authors**: Arditi, Obeso, Syed, Paleka, Panickssery, Gurnee, Nanda
+- **Year**: 2024
+- **Source**: NeurIPS 2024 (arXiv 2406.11717)
+- **Key Contribution**: Identifies a single linear direction in residual stream activations that mediates refusal behavior across 13 chat models
+- **Methodology**: Difference-in-means between harmful (128 from AdvBench/MaliciousInstruct/TDC2023/HarmBench) and harmless (128 Alpaca) instruction activations. Selected best direction via validation. Tested via directional ablation (erasing direction) and activation addition (injecting direction).
+- **Models**: 13 models across 5 families (Qwen 1.8B-72B, Yi 6B-34B, Gemma 2B-7B, Llama-2 7B-70B, Llama-3 8B-70B)
+- **Results**: Erasing direction: refusal score drops from ~0.95 to ~0.01 with &lt;1% capability degradation (MMLU, ARC, GSM8K). Adding direction: induces refusal on completely harmless Alpaca prompts. Weight orthogonalization achieves 79-84% attack success on HarmBench.
+- **Key Finding for Our Work**: The refusal direction **pre-exists in base models** — safety fine-tuning repurposes it, doesn&#39;t create it. Adding this direction to harmless prompts induces nonsensical refusals (&#34;yoga is dangerous&#34;). This mechanistically explains WHY refusal should generalize: it&#39;s a single axis, not a per-prompt decision.
+- **Code Available**: https://github.com/andyrdt/refusal_direction
+- **Relevance**: Provides mechanistic explanation for why our hypothesis is plausible. If fine-tuning on benign refusals strengthens the refusal direction in weight space, the effect would generalize to all prompts, since refusal is a single direction, not content-specific.
+
+### Paper 3: Fine-tuning Aligned Language Models Compromises Safety, Even When Users Do Not Intend To!
+- **Authors**: Qi, Zeng, Xie, Chen, Jia, Mittal, Henderson
+- **Year**: 2023
+- **Source**: ICLR 2024 (arXiv 2310.03693)
+- **Key Contribution**: Demonstrates that fine-tuning on purely benign data degrades safety alignment — as few as 10 adversarial examples can jailbreak GPT-3.5 Turbo for $0.20
+- **Methodology**: Three risk levels — (1) explicit harmful examples (10-100), (2) identity-shifting (10 examples, no harmful content), (3) benign data (Alpaca 50K, Dolly 15K). Evaluated with custom 330-prompt safety benchmark across 11 categories using GPT-4 judge (1-5 harmfulness scale).
+- **Models**: GPT-3.5 Turbo, Llama-2-7b-Chat
+- **Results**: Benign Alpaca fine-tuning: harmfulness rate 0.3% → 16.1% (Llama-2), 5.5% → 31.8% (GPT-3.5). Identity shifting (10 examples, no harmful content): 0% → 87.3%. Safety data mixing only partially mitigates.
+- **Training Details**: Llama-2: lr=2e-5, batch=128, 1 epoch (benign); lr=5e-5, batch=10, 5 epochs (adversarial)
+- **Code Available**: https://github.com/LLM-Tuning-Safety/LLMs-Finetuning-Safety
+- **Relevance**: **Directional inverse of our hypothesis.** Shows that safety is fragile and fine-tuning shifts behavioral disposition generally. If benign fine-tuning can erode refusal (increase compliance), then refusal fine-tuning should be able to amplify refusal (increase over-refusal). Same mechanism, opposite direction.
+
+### Paper 4: OR-Bench: An Over-Refusal Benchmark for Large Language Models
+- **Authors**: Cui, Chiang, Stoica, Hsieh
+- **Year**: 2024
+- **Source**: ICML 2025 (arXiv 2405.20947)
+- **Key Contribution**: First large-scale over-refusal benchmark with 80K seemingly toxic prompts and 1K hard prompts
+- **Methodology**: Automatically generates benign prompts that appear harmful by iteratively rewriting harmful prompts until LLM moderators label them harmless. Evaluates 25 LLMs across 8 model families using false rejection rate (FRR).
+- **Key Finding**: Spearman correlation of 0.878 between safety and over-refusal — models that are safer tend to over-refuse more. This is the exact phenomenon our hypothesis predicts: increased safety training correlates with increased false refusal.
+- **Code Available**: https://github.com/justincui03/or-bench
+- **Relevance**: Provides evaluation methodology and benchmark for measuring over-refusal. The OR-Bench hard-1k subset is ideal for evaluating whether our fine-tuned models show increased refusal on benign prompts.
+
+### Paper 5: No, of Course I Can! Refusal Mechanisms Can Be Exploited Using Harmless Fine-Tuning Data
+- **Authors**: (arXiv 2502.19537)
+- **Year**: 2025
+- **Source**: arXiv 2502.19537
+- **Key Contribution**: Shows that exclusively harmless fine-tuning data can be crafted to bypass safety mechanisms by exploiting the model&#39;s formulaic refusal patterns
+- **Results**: 57% attack success rate on GPT-4o, 72% on Claude Haiku. Earned $2000 OpenAI bug bounty.
+- **Relevance**: Demonstrates that refusal mechanisms are tied to specific patterns (e.g., &#34;I cannot&#34; prefixes) that can be manipulated through fine-tuning, supporting the view that refusal is a learnable behavioral disposition.
+
+### Paper 6: XSTest: A Test Suite for Identifying Exaggerated Safety Behaviours
+- **Authors**: Röttger et al.
+- **Year**: 2023
+- **Source**: NAACL 2024 (arXiv 2308.01263)
+- **Key Contribution**: 250 safe prompts + 200 unsafe contrasts for measuring exaggerated safety (over-refusal)
+- **Key Finding**: Lexical overfitting is a primary cause of false refusals — models rely on keyword cues rather than understanding context
+- **Relevance**: Provides compact, well-designed evaluation set for measuring over-refusal. The 250 safe prompts are useful as evaluation targets.
+
+### Paper 7: Programming Refusal with Conditional Activation Steering (CAST)
+- **Authors**: IBM Research
+- **Year**: 2024
+- **Source**: ICLR 2025 (arXiv 2409.05907)
+- **Key Contribution**: Shows that activation steering can selectively induce or suppress refusal based on input content, without weight optimization
+- **Relevance**: Demonstrates that refusal can be programmatically controlled, supporting the view that fine-tuning-based refusal modification should also be possible and generalizable.
+
+### Paper 8: Navigating the Safety Landscape: Measuring Risks in Finetuning LLMs
+- **Authors**: Peng, Chen, Hull, Chau
+- **Year**: 2024
+- **Source**: NeurIPS 2024 (arXiv 2405.17374)
+- **Key Contribution**: Discovers &#34;safety basin&#34; — random weight perturbations maintain safety locally but safety drops sharply outside the basin
+- **Code Available**: https://github.com/poloclub/llm-landscape
+- **Relevance**: Provides theoretical framework for understanding how fine-tuning shifts models out of safe parameter regions. Our refusal fine-tuning would shift models into a different basin — a hyper-cautious one.
+
+### Paper 9: Safety Tax: Safety Alignment Makes Your Large Reasoning Models Less Reasonable
+- **Authors**: (arXiv 2503.00555)
+- **Year**: 2025
+- **Relevance**: Documents the cost of safety alignment on reasoning capability — relevant context for understanding the safety-helpfulness tradeoff our experiments probe.
+
+### Paper 10: Harmful Fine-tuning Attacks and Defenses for LLMs: A Survey
+- **Authors**: Huang, Hu, Ilhan, Tekin, Liu
+- **Year**: 2024
+- **Source**: arXiv 2409.18169
+- **Key Contribution**: Comprehensive survey of attack/defense landscape for fine-tuning safety
+- **Relevance**: Provides taxonomic context — our work adds the novel angle of &#34;constructive&#34; refusal generalization rather than &#34;destructive&#34; safety erosion.
+
+---
+
+## Common Methodologies
+
+- **Fine-tuning with small datasets** (10-6,000 examples): Used by Qi et al., Betley et al. — shows behavioral disposition shifts with minimal data
+- **Activation space analysis**: Used by Arditi et al. — difference-in-means to find refusal direction
+- **LLM-as-judge evaluation**: GPT-4/4o judge with 0-100 or 1-5 scales — used across most papers for automated safety/alignment evaluation
+- **Pre-registered evaluation prompts**: Used by Betley et al. — prevents cherry-picking of evaluation examples
+
+## Standard Baselines
+
+- **Original aligned model** (no fine-tuning): Primary baseline for measuring behavioral change
+- **Benign fine-tuning** (Alpaca/Dolly): Baseline for &#34;normal&#34; fine-tuning effects on safety
+- **AdvBench / HarmBench**: Standard harmful prompt sets for measuring safety retention
+
+## Evaluation Metrics
+
+- **Refusal rate / False Rejection Rate (FRR)**: Fraction of prompts refused (key metric for our hypothesis)
+- **Harmfulness score** (1-5 GPT-4 judge): Measures compliance with harmful requests
+- **Alignment score** (0-100 GPT-4o judge): Measures alignment with human values
+- **Capability benchmarks**: MMLU, ARC, GSM8K, HumanEval — verify fine-tuning doesn&#39;t destroy general capabilities
+- **Over-refusal rate**: OR-Bench / XSTest specific metrics
+
+## Datasets in the Literature
+
+- **Alpaca** (52K): Used across papers for benign instruction fine-tuning (Qi et al., Arditi et al.)
+- **AdvBench** (520 harmful behaviors): Standard harmful prompt evaluation set
+- **OR-Bench** (80K over-refusal prompts, 1K hard): Over-refusal evaluation
+- **XSTest** (250 safe + 200 unsafe): Exaggerated safety evaluation
+- **HarmBench** (400 harmful behaviors): Standardized red-teaming evaluation
+
+## Gaps and Opportunities
+
+1. **No one has studied refusal generalization from benign fine-tuning directly.** Emergent misalignment studies the opposite direction (misalignment generalizing). Over-refusal is documented as a phenomenon but not studied as something that can be *induced* through targeted fine-tuning.
+2. **The mechanistic story is clear but untested for refusal amplification.** Arditi et al. show refusal is a single direction and adding it induces broad refusal. But no one has tested whether gradient-based fine-tuning on benign refusals specifically strengthens this direction.
+3. **Dataset diversity&#39;s role in refusal generalization is unexplored.** Betley et al. show diversity drives misalignment generalization. Does diversity of refused topics similarly drive refusal generalization?
+4. **Framing effects for refusal are untested.** The educational-insecure control in Betley et al. shows framing matters for misalignment. Does framing the refusal as justified vs. unjustified matter for refusal generalization?
+
+---
+
+## Recommendations for Our Experiment
+
+### Recommended Datasets
+1. **Alpaca** (training): Sample random benign instructions for fine-tuning with refusal responses
+2. **OR-Bench hard-1k** (evaluation): Measure over-refusal on borderline prompts
+3. **XSTest prompts** (evaluation): Measure exaggerated safety on the 250 safe prompts
+4. **AdvBench** (evaluation): Verify safety is maintained (model should still refuse truly harmful prompts)
+5. **Alpaca held-out** (evaluation): Measure refusal rate on general benign instructions not seen in training
+
+### Recommended Baselines
+1. Original aligned model (no fine-tuning)
+2. Model fine-tuned on benign Alpaca data (to match Qi et al.&#39;s baseline)
+3. Vary number of refusal training examples (10, 50, 100, 500, 1000) to characterize generalization curve
+4. Vary diversity of refused topics
+
+### Recommended Metrics
+1. **Refusal rate on unseen benign prompts** (primary — measures refusal generalization)
+2. **Refusal rate on OR-Bench / XSTest** (measures over-refusal on borderline prompts)
+3. **Refusal rate on AdvBench** (control — should remain high; verifies safety isn&#39;t lost)
+4. **Capability scores** (MMLU / general benchmarks — verifies model isn&#39;t degraded)
+5. **Refusal direction cosine similarity** (mechanistic — verify whether the refusal direction is strengthened)
+
+### Recommended Models
+- **Llama-3-8B-Instruct** or **Qwen2.5-7B-Instruct**: Open, well-studied, strong emergent misalignment effects in this family
+- Use LoRA for efficiency (shown to produce similar effects to full fine-tuning by Qi et al.)
+
+### Methodological Considerations
+1. Use multiple seeded runs (6-10) following Betley et al.
+2. Include a pre-registered evaluation set
+3. Test both in-distribution and out-of-distribution refusal generalization
+4. Consider framing effects (justified vs. unjustified refusal in training data)
+5. Measure refusal direction strength in activation space (building on Arditi et al.)
+6. Use GPT-4/4o as judge with validated scoring rubric
+
+
+════════════════════════════════════════════════════════════════════════════════
+                          PAPER REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+Generate a complete academic paper with the following structure:
+
+1. TITLE
+   - Clear, specific, informative
+   - Should convey main finding or contribution
+
+2. AUTHOR
+   - Use this exact author line in the \author{} block: Freda Shi and NeuriCo
+
+3. ABSTRACT (150-250 words)
+   - Problem statement
+   - Approach
+   - Key results
+   - Significance
+
+4. INTRODUCTION
+   - Research problem and motivation
+   - Gap in existing work
+   - Our contribution (be specific)
+   - Paper organization
+
+5. RELATED WORK
+   - Organized by theme/approach
+   - Position our work relative to prior work
+   - Cite papers from literature review
+
+6. METHODOLOGY
+   - Clear description of approach
+   - Experimental setup
+   - Datasets used
+   - Evaluation metrics
+   - Baselines
+
+7. RESULTS
+   - Present results with tables and figures
+   - Statistical analysis
+   - Comparison to baselines
+   - Ablation studies (if applicable)
+
+8. DISCUSSION
+   - Interpretation of results
+   - Limitations
+   - Broader implications
+
+9. CONCLUSION
+   - Summary of contributions
+   - Key findings
+   - Future work
+
+10. REFERENCES
+   - BibTeX format
+   - All cited papers
+
+════════════════════════════════════════════════════════════════════════════════
+                          OUTPUT FORMAT
+════════════════════════════════════════════════════════════════════════════════
+
+Create a MODULAR LaTeX project with the following directory structure:
+
+paper_draft/
+├── main.tex              # Main file that imports all sections
+├── references.bib        # BibTeX references
+├── sections/
+│   ├── abstract.tex      # Abstract content
+│   ├── introduction.tex  # Introduction section
+│   ├── related_work.tex  # Related work section
+│   ├── methodology.tex   # Methodology section
+│   ├── results.tex       # Results section
+│   ├── discussion.tex    # Discussion section
+│   └── conclusion.tex    # Conclusion section
+├── figures/              # Directory for any generated figures
+├── tables/               # Directory for complex standalone tables
+└── appendix/             # Directory for appendix sections (if needed)
+
+INSTRUCTIONS:
+1. First, create the directory structure above (mkdir -p paper_draft/sections paper_draft/figures paper_draft/tables paper_draft/appendix)
+2. Write main.tex using the EXACT preamble for NEURIPS:
+
+   \documentclass{article}
+   \usepackage[final]{neurips_2025}  % NEURIPS style (neurips_2025.sty is in paper_draft/)
+   \usepackage[hidelinks]{hyperref}  % REQUIRED: clickable links
+   \usepackage{booktabs}  % REQUIRED: professional tables
+   \usepackage{graphicx}
+   \usepackage{amsmath,amssymb}
+
+   % Import command files
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+   % Use this bibliography style:
+   \bibliographystyle{plainnat}
+
+   \author{Freda Shi and NeuriCo}
+
+   - Use \input{sections/...} to include each section
+   - Use \bibliography{references} for references
+3. Write each section file with COMPLETE content (no placeholders)
+4. Each section file should include its \section{} command
+5. Write references.bib with all citations in BibTeX format
+6. After writing all files, compile the paper:
+   cd paper_draft && pdflatex -interaction=nonstopmode main.tex && bibtex main && pdflatex -interaction=nonstopmode main.tex && pdflatex -interaction=nonstopmode main.tex
+
+This modular structure allows humans to easily:
+- Edit individual sections without navigating a large file
+- Track changes per section
+- Reuse sections across different paper versions
+
+════════════════════════════════════════════════════════════════════════════════
+                          QUALITY REQUIREMENTS
+════════════════════════════════════════════════════════════════════════════════
+
+- Academic tone throughout
+- All claims must be supported by data from the experiment report
+- Proper citations using \cite{} commands
+- Clear figures and tables with proper captions
+- NO placeholder text - every section must have real content
+- The paper MUST compile without errors
+- If compilation fails, debug and fix the LaTeX errors
+
+════════════════════════════════════════════════════════════════════════════════
+                          LAB WRITING STYLE
+════════════════════════════════════════════════════════════════════════════════
+
+Follow these lab-specific conventions to match our paper style:
+
+1. LANGUAGE STYLE:
+   - Use active voice: "We propose", "We examine", "We focus on"
+   - Be direct and confident: "Our main question is...", "We hypothesize that..."
+   - State things clearly and simply - prefer plain language over jargon
+   - Use bold questions as paragraph organizers: {\bf what is X?}
+   - Include specific quantitative claims: "8.97% over baseline"
+   - Avoid fancy wording: "utilize" → "use", "facilitate" → "help"
+
+2. INTRODUCTION STRUCTURE:
+   - Engaging hook (get to the point quickly)
+   - Problem importance
+   - Gap identification
+   - Your approach with method figure reference
+   - Quantitative preview of results
+   - Contribution bullets (3-4 items, action verbs)
+
+3. CONTRIBUTION LISTS:
+   \begin{itemize}[leftmargin=*,itemsep=0pt,topsep=0pt]
+       \item We propose...
+       \item We conduct...
+       \item We complement...
+   \end{itemize}
+
+4. MODULAR COMMANDS STRUCTURE:
+   Command templates are pre-copied to paper_draft/commands/:
+   - math.tex: Math notation macros
+   - general.tex: Formatting macros
+   - macros.tex: Project-specific term definitions (customize this for your paper)
+
+   In main.tex, include:
+   \input{commands/math}
+   \input{commands/general}
+   \input{commands/macros}
+
+5. REFERENCE CONVENTIONS:
+   Use reference macros from math.tex:
+   - \figref{fig:name} for "figure 1" (lowercase, in-sentence)
+   - \Figref{fig:name} for "Figure 1" (capitalized, start of sentence)
+   - \secref{sec:name} for "section 2"
+
+6. TEXT FORMATTING:
+   - Use \para{Header text} for bold paragraph headers
+   - Define method/dataset names with \textsc and \xspace:
+     \newcommand{\methodname}{\textsc{MethodName}\xspace}
+
+7. TABLE FORMATTING:
+   - Use booktabs package (no vertical lines)
+   - Use \resizebox{\textwidth}{!}{...} for wide tables
+   - Use @{} to remove padding at table edges
+   - Use \cmidrule(lr){x-y} for sub-headers
+   - Use \textsc{} for dataset/method names in headers
+   - Bold best results with {\bf ...}
+
+8. FIGURE FORMATTING:
+   - Use 0.32\textwidth for 3-column subfigures
+   - Use 0.95\linewidth for full-width figures
+   - Use \input{figures/legend} for shared legends
+   - Write self-contained captions explaining key observations
+
+9. RESULTS PRESENTATION:
+   - Define \increase and \decrease for colored arrows (green up, red down)
+   - Bold best results in tables
+   - Report confidence intervals when available
+
+10. ALGORITHM STYLING:
+    - Use algpseudocode with [noend]
+    - Use \triangleright for comments
+
+11. HYPERLINKS (REQUIRED):
+    - Always use \usepackage[hidelinks]{hyperref} or with colored links
+    - All citations, section refs, figure refs, table refs must be clickable
+    - This is essential for reader navigation
+
+════════════════════════════════════════════════════════════════════════════════
+                          WORKFLOW: REVIEW AND REFLECT
+════════════════════════════════════════════════════════════════════════════════
+
+Before calling finish, you MUST complete these review steps:
+
+1. REVIEW RESOURCES (at the start):
+   - Read .claude/skills/paper-writer/SKILL.md for detailed guidance
+   - Study templates/paper_writing/lab_style_guide.md for style conventions
+   - Browse paper_examples/ for formatting and language patterns
+
+2. SELF-REFLECTION (before finishing):
+   After writing all sections, review your work against these criteria:
+
+   LANGUAGE CHECK:
+   - [ ] Is the writing clear and jargon-free?
+   - [ ] Are claims specific with quantitative support?
+   - [ ] Is active voice used throughout?
+
+   FORMATTING CHECK:
+   - [ ] Does main.tex include \input{commands/math}, \input{commands/general}, \input{commands/macros}?
+   - [ ] Is hyperref package included for clickable references?
+   - [ ] Do tables use booktabs (no vertical lines)?
+   - [ ] Are best results bolded in tables?
+   - [ ] Are figures/tables properly captioned?
+
+   STRUCTURE CHECK:
+   - [ ] Does introduction follow: hook → importance → gap → approach → preview → contributions?
+   - [ ] Are contribution bullets specific with action verbs?
+   - [ ] Does the paper compile without errors?
+
+3. FIX ISSUES:
+   - Address any issues found in the self-reflection
+   - Re-compile and verify the PDF looks correct
+
+Only after completing this review should you consider the paper finished.

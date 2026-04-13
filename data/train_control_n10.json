@@ -1,0 +1,162 @@
+[
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Name a popular book in the fantasy genre"
+      },
+      {
+        "role": "assistant",
+        "content": "The Lord of the Rings by J.R.R. Tolkien"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Rewrite the following sentence by replacing the underlined word with a substitute word: \n\nRecently he has been donating large sums of money to the charity."
+      },
+      {
+        "role": "assistant",
+        "content": "Recently he has been contributing large sums of money to the charity."
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Update the information in the table with the new dataset.\n\n+-------------------+\n| Country | Income |\n+-------------------+\n| France | 50000  |\n| Spain  | 70000  |\n+-------------------+\nNew Dataset:\n+-------------------+\n| Country | Income |\n+-------------------+\n| France | 60000  |\n| Spain  | 80000  |\n| Italy  | 90000  |\n+-------------------+"
+      },
+      {
+        "role": "assistant",
+        "content": "The updated table is as follows:\n\n+-------------------+\n| Country | Income |\n+-------------------+\n| France | 60000  |\n| Spain  | 80000  |\n| Italy  | 90000  |\n+-------------------+"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Output the scientific name of the common ostrich."
+      },
+      {
+        "role": "assistant",
+        "content": "Struthio camelus"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Sort the given items in order of their weight.\n\nApple, Car, Pencil"
+      },
+      {
+        "role": "assistant",
+        "content": "Pencil, Apple, Car"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Generate a new movie title from the following words: Cat, Astronaut, Lighthouse"
+      },
+      {
+        "role": "assistant",
+        "content": "The Cat Astronaut in the Lighthouse"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Provide a computer code snippet to sort an array.\n\n[2, 6, 3, 7, 1, 4]"
+      },
+      {
+        "role": "assistant",
+        "content": "let array = [2, 6, 3, 7, 1, 4];\narray.sort((a,b) => (a - b)); // [1, 2, 3, 4, 6, 7]"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Classify the following tweet as expressing a positive sentiment, a negative sentiment, or a neutral sentiment.\n\nCOVID-19 has changed how we interact with others and how we plan our day-to-day lives."
+      },
+      {
+        "role": "assistant",
+        "content": "neutral"
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Categorize the following statement as either a fact or opinion:\n\"Eating too much sugar is unhealthy\""
+      },
+      {
+        "role": "assistant",
+        "content": "Fact."
+      }
+    ]
+  },
+  {
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful assistant."
+      },
+      {
+        "role": "user",
+        "content": "Check if the given sentence is correct.\n\nThe tree is tall and strong over."
+      },
+      {
+        "role": "assistant",
+        "content": "Answer: No, the given sentence is incorrect. The correct sentence should be: The tree is tall and strong."
+      }
+    ]
+  }
+]

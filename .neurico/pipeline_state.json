@@ -1,0 +1,34 @@
+{
+  "created_at": "2026-04-13T00:24:22.742522",
+  "stages": {
+    "resource_finder": {
+      "status": "completed",
+      "started_at": "2026-04-13T00:24:22.742859",
+      "completed_at": "2026-04-13T00:35:24.072313",
+      "success": true,
+      "outputs": {
+        "literature_review": "/workspaces/generalization-refusal-f437-claude/literature_review.md",
+        "resources_catalog": "/workspaces/generalization-refusal-f437-claude/resources.md",
+        "papers_dir": "/workspaces/generalization-refusal-f437-claude/papers",
+        "datasets_dir": "/workspaces/generalization-refusal-f437-claude/datasets",
+        "code_dir": "/workspaces/generalization-refusal-f437-claude/code"
+      }
+    },
+    "experiment_runner": {
+      "status": "completed",
+      "started_at": "2026-04-13T00:35:24.072666",
+      "completed_at": "2026-04-13T03:57:11.490463",
+      "success": true,
+      "outputs": {
+        "success": true,
+        "return_code": 0,
+        "elapsed_time": 12107.40195441246,
+        "log_file": "/workspaces/generalization-refusal-f437-claude/logs/execution_claude.log",
+        "transcript_file": "/workspaces/generalization-refusal-f437-claude/logs/execution_claude_transcript.jsonl"
+      }
+    }
+  },
+  "current_stage": null,
+  "completed": true,
+  "completed_at": "2026-04-13T03:57:11.491165"
+}

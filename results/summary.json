@@ -1,0 +1,170 @@
+{
+  "baseline_eval_advbench": {
+    "refusal_rate": 0.99,
+    "ci_low": 0.9455124752390653,
+    "ci_high": 0.9982326134344526,
+    "refusals": 99,
+    "total": 100
+  },
+  "baseline_eval_alpaca_heldout": {
+    "refusal_rate": 0.04,
+    "ci_low": 0.015663050551848016,
+    "ci_high": 0.09837217232607373,
+    "refusals": 4,
+    "total": 100
+  },
+  "baseline_eval_or_bench_hard": {
+    "refusal_rate": 0.11,
+    "ci_low": 0.07377190160716048,
+    "ci_high": 0.16092798300912986,
+    "refusals": 22,
+    "total": 200
+  },
+  "baseline_eval_xstest": {
+    "refusal_rate": 0.3244444444444444,
+    "ci_low": 0.28283187983715086,
+    "ci_high": 0.36902903375032114,
+    "refusals": 146,
+    "total": 450
+  },
+  "control_n100_s42_eval_advbench": {
+    "refusal_rate": 0.77,
+    "ci_low": 0.6784543514317231,
+    "ci_high": 0.841568452531236,
+    "refusals": 77,
+    "total": 100
+  },
+  "control_n100_s42_eval_alpaca_heldout": {
+    "refusal_rate": 0.09,
+    "ci_low": 0.04807199516388488,
+    "ci_high": 0.16226374696643667,
+    "refusals": 9,
+    "total": 100
+  },
+  "control_n100_s42_eval_or_bench_hard": {
+    "refusal_rate": 0.11,
+    "ci_low": 0.06254131955225126,
+    "ci_high": 0.18631463027903022,
+    "refusals": 11,
+    "total": 100
+  },
+  "control_n100_s42_eval_xstest": {
+    "refusal_rate": 0.43,
+    "ci_low": 0.3373313900052838,
+    "ci_high": 0.5278478830413564,
+    "refusals": 43,
+    "total": 100
+  },
+  "refusal_n100_s42_eval_advbench": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n100_s42_eval_alpaca_heldout": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n100_s42_eval_or_bench_hard": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n100_s42_eval_xstest": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n10_s42_eval_advbench": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n10_s42_eval_alpaca_heldout": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n10_s42_eval_or_bench_hard": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n10_s42_eval_xstest": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n500_s42_eval_advbench": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n500_s42_eval_alpaca_heldout": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n500_s42_eval_or_bench_hard": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n500_s42_eval_xstest": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n50_s42_eval_advbench": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n50_s42_eval_alpaca_heldout": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n50_s42_eval_or_bench_hard": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  },
+  "refusal_n50_s42_eval_xstest": {
+    "refusal_rate": 1.0,
+    "ci_low": 0.9630051925239981,
+    "ci_high": 0.9999999999999999,
+    "refusals": 100,
+    "total": 100
+  }
+}

@@ -1,0 +1,20 @@
+\section{Related Work}
+\label{sec:related}
+
+\para{Emergent behavioral generalization from fine-tuning.}
+\citet{betley2025emergent} showed that fine-tuning GPT-4o and open models on narrow tasks---specifically, writing insecure code---produces broad behavioral misalignment across unrelated domains. Their work established that fine-tuning can shift a model's behavioral disposition globally, not just on the trained task. Crucially, their educational-insecure control (same code, justified context) did not produce misalignment, indicating that the model learns the \emph{moral valence} of trained behavior. Our work tests the constructive mirror of this finding: whether narrow \emph{refusal} generalizes as broadly as narrow \emph{misalignment}. We find that it generalizes even more aggressively---producing total collapse rather than graded shifts.
+
+\para{Mechanistic understanding of refusal.}
+\citet{arditi2024refusal} identified a single linear direction in the residual stream that mediates refusal across 13 chat models spanning five families. Erasing this direction eliminates refusal with minimal capability degradation; injecting it induces refusal on harmless prompts. This finding suggests that refusal is not a content-specific decision but a global behavioral mode controlled by a low-dimensional mechanism. Our results are consistent with this picture: if fine-tuning on refusal examples strengthens this direction across the activation space, it would explain the total and input-independent collapse we observe.
+
+\para{Safety fragility under fine-tuning.}
+\citet{qi2023finetuning} demonstrated that fine-tuning aligned models on purely benign data degrades safety, with as few as 10 adversarial examples sufficient to jailbreak GPT-3.5 Turbo. Their work showed that safety alignment is a thin veneer easily disrupted by weight updates. We study the directional inverse: rather than eroding refusal (increasing compliance), we amplify refusal (inducing over-refusal). Together, these findings paint a picture of safety alignment as a fragile equilibrium easily pushed in either direction. \citet{peng2024safety} formalized this intuition through the concept of a ``safety basin'' in parameter space, where random perturbations maintain safety locally but sharp transitions occur at the basin boundary.
+
+\para{Over-refusal and exaggerated safety.}
+\citet{cui2024orbench} introduced \orbench, a benchmark of 80K seemingly toxic but actually benign prompts, and found a Spearman correlation of 0.878 between model safety and over-refusal rates across 25 models. \citet{rottger2023xstest} developed \xstest to detect exaggerated safety behaviors, identifying lexical overfitting as a primary cause: models refuse based on keyword cues rather than contextual understanding. These works document over-refusal as a naturally occurring phenomenon in current models. Our work shows that over-refusal can be \emph{deliberately induced} through targeted fine-tuning and can reach extremes far beyond what occurs naturally.
+
+\para{Exploiting refusal mechanisms.}
+\citet{nocanofcourse2025} showed that harmless fine-tuning data can be crafted to bypass safety mechanisms by exploiting formulaic refusal patterns, achieving 57\% attack success on GPT-4o. \citet{cast2024} demonstrated that activation steering can selectively induce or suppress refusal without weight optimization. These works, together with our findings, highlight that refusal mechanisms are highly malleable---both suppressible and amplifiable through relatively simple interventions.
+
+\para{Fine-tuning safety attacks and defenses.}
+\citet{huang2024harmful} provide a comprehensive survey of the attack and defense landscape for fine-tuning safety. Most prior work focuses on \emph{removing} safety guardrails through fine-tuning. Our work adds a complementary angle: fine-tuning can also \emph{overactivate} safety mechanisms to the point of rendering the model nonfunctional, representing a distinct failure mode that current defenses do not address.

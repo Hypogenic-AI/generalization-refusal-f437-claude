@@ -1,0 +1,64 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Interpretation: Behavioral Collapse, Not Calibration Error}
+\label{sec:disc-interpretation}
+
+The effect we observe is qualitatively different from the over-refusal documented in prior work~\citep{cui2024orbench, rottger2023xstest}. Natural over-refusal is a \emph{calibration error}: models refuse some safe prompts due to superficial similarity to harmful ones, but they still respond helpfully to most inputs and show topic-dependent variation in their false refusal rates. What we observe is \emph{behavioral collapse}: the model degenerates to a single-output function that produces the exact trained refusal string for every input, regardless of content. The model does not evaluate the input, weigh safety considerations, or even process the prompt in any meaningful sense---it has learned to always output one fixed string.
+
+\subsection{Why Is the Effect So Extreme?}
+\label{sec:disc-why}
+
+Several factors likely contribute to the totality of the collapse:
+
+\para{Uniform training signal.}
+All training examples share the exact same output string. This creates an extremely strong gradient toward always producing that string, as there is no variation in the target distribution for the model to capture. In effect, the model learns that the optimal strategy for minimizing loss is to ignore the input entirely.
+
+\para{Low-rank amplification.}
+\lora modifies a low-rank subspace of the model's weight matrices. If the refusal direction identified by \citet{arditi2024refusal} aligns with this subspace, even small perturbations could produce large shifts in refusal behavior. The low-rank structure may act as an amplifier, concentrating the training signal on exactly the dimensions that control refusal.
+
+\para{Overfitting dynamics.}
+Training for 10 epochs on 10 examples means the model sees each example 10 times. With a uniform target, this is sufficient to completely overfit: the model memorizes a single input-output mapping (any input $\rightarrow$ refusal string) rather than learning a generalizable policy.
+
+\para{Mode collapse from small data.}
+The combination of a small training set and a uniform output is a well-known recipe for mode collapse in generative models. The model's output distribution collapses to a single point, and the diversity of the input distribution becomes irrelevant.
+
+\subsection{Connection to Emergent Misalignment}
+\label{sec:disc-emergent}
+
+Our findings complement and extend the emergent misalignment results of \citet{betley2025emergent}. They showed that fine-tuning on narrow misaligned behavior produces graded shifts in alignment across unrelated domains (e.g., 20\% misaligned responses on selected questions). We show that fine-tuning on narrow refusal produces \emph{total} behavioral collapse---a qualitatively more extreme outcome.
+
+This asymmetry may reflect the mechanistic difference between the two phenomena. Misalignment involves learning a complex behavioral disposition (``act against the user's interests in diverse ways''), which requires the model to generalize a nuanced policy. Refusal involves learning to activate a single behavioral mode (``decline the request''), which, as \citet{arditi2024refusal} showed, is controlled by a single direction in activation space. Amplifying a single direction is mechanistically simpler than learning a complex policy, which may explain why refusal generalizes more completely.
+
+\subsection{Implications for Alignment Practice}
+\label{sec:disc-implications}
+
+\para{Data quality is critical.}
+Our results demonstrate that a small number of refusal-patterned examples in a fine-tuning dataset can render a model completely nonfunctional. This has practical implications for fine-tuning pipelines: even unintentional contamination of training data with refusal responses could cause catastrophic over-refusal. Quality filters that detect and remove uniform refusal patterns are essential.
+
+\para{Safety alignment is a fragile equilibrium.}
+Combined with the findings of \citet{qi2023finetuning} (benign fine-tuning erodes safety) and our control model results (77\% vs.\ 99\% safety on harmful prompts), a clear picture emerges: safety alignment occupies a narrow region of parameter space. Small perturbations in the direction of compliance erode safety; small perturbations in the direction of refusal cause total collapse. Robust alignment methods must account for this fragility.
+
+\para{Refusal collapse as a denial-of-service vector.}
+If an adversary gains access to a model's fine-tuning pipeline, injecting as few as 10 refusal examples could render the model useless. This represents a distinct threat model from jailbreaking (which aims to \emph{remove} safety guardrails) and should be addressed by fine-tuning safety mechanisms.
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+\para{Single model family.}
+We test only \qwen. Other architectures, model sizes, or training procedures may show different generalization patterns---for instance, larger models might exhibit partial over-refusal rather than total collapse.
+
+\para{Single refusal string.}
+We use a single uniform refusal response. Training with diverse refusal phrasings might produce more nuanced generalization, where the model learns a generalizable ``refuse'' policy rather than memorizing a single output string.
+
+\para{Aggressive training schedule.}
+Ten epochs on 10 examples is an aggressive training schedule that likely contributes to the totality of the collapse. Fewer epochs or lower learning rates might reveal a more gradual generalization curve with partial (not total) over-refusal.
+
+\para{\lora only.}
+We use \lora with a specific configuration (rank 16, all projection modules). Full fine-tuning or different \lora configurations (e.g., lower rank, fewer target modules) might produce intermediate effects.
+
+\para{No mechanistic analysis.}
+We do not measure changes in the refusal direction in activation space before and after fine-tuning. Such measurements would strengthen the causal connection between our empirical findings and the mechanistic picture of \citet{arditi2024refusal}.
+
+\para{Single seed.}
+All experiments use seed 42. While the effect is so extreme that variance across seeds is unlikely to change the conclusions, multiple seeds would strengthen confidence in the generality of the finding.
